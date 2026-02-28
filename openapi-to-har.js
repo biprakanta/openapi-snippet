@@ -363,12 +363,24 @@ const getPayloads = function (openApi, path, method) {
         } else if (type === 'multipart/form-data') {
           if (sample !== undefined) {
             const params = [];
+            const props = (content.schema && content.schema.properties) || {};
             Object.keys(sample).forEach((key) => {
               let value = sample[key];
               if (typeof sample[key] !== 'string') {
                 value = JSON.stringify(sample[key]);
               }
-              params.push({ name: key, value: value });
+              const propSchema = props[key] || {};
+              const isBinary =
+                propSchema.format === 'binary' ||
+                (propSchema.type === 'string' &&
+                  propSchema.format === 'binary');
+              const param = { name: key, value: value };
+              if (isBinary) {
+                param.fileName = param.fileName || 'file';
+                param.contentType =
+                  param.contentType || 'application/octet-stream';
+              }
+              params.push(param);
             });
             payloads.push({
               mimeType: type,
